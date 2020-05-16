@@ -1,71 +1,99 @@
 'use strict'
 const path = require('path')
 const defaultSettings = require('./src/config/index.js')
-function resolve(dir) {
-  return path.join(__dirname, dir)
-}
-const name = defaultSettings.title || 'vue mobile template' // page title
-const port = 9018 // dev port
-const externals = {
-  vue: 'Vue',
-  'vue-router': 'VueRouter',
-  vuex: 'Vuex',
-  vant: 'vant',
-  axios: 'axios'
-}
-// cdn
-const cdn = {
-  // 开发环境
-  dev: {
-    css: [],
-    js: []
-  },
-  // 生产环境
-  build: {
-    css: ['https://cdn.jsdelivr.net/npm/vant@beta/lib/index.css'],
-    js: [
-      'https://cdnjs.cloudflare.com/ajax/libs/vue/2.6.10/vue.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/vue-router/3.0.6/vue-router.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/vuex/3.1.1/vuex.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js',
-      'https://cdn.jsdelivr.net/npm/vant@beta/lib/vant.min.js'
-    ]
-  }
-}
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+
+const resolve = dir => path.join(__dirname, dir)
+// page title
+const name = defaultSettings.title || 'vue mobile template'
+const IS_PROD = ['production', 'prod'].includes(process.env.NODE_ENV)
+
+// externals
+// const externals = {
+//   vue: 'Vue',
+//   'vue-router': 'VueRouter',
+//   vuex: 'Vuex',
+//   vant: 'vant',
+//   axios: 'axios'
+// }
+// CDN外链，会插入到index.html中
+// const cdn = {
+//   // 开发环境
+//   dev: {
+//     css: [],
+//     js: []
+//   },
+//   // 生产环境
+//   build: {
+//     css: ['https://cdn.jsdelivr.net/npm/vant@2.4.7/lib/index.css'],
+//     js: [
+//       'https://cdn.jsdelivr.net/npm/vue@2.6.11/dist/vue.min.js',
+//       'https://cdn.jsdelivr.net/npm/vue-router@3.1.5/dist/vue-router.min.js',
+//       'https://cdn.jsdelivr.net/npm/axios@0.19.2/dist/axios.min.js',
+//       'https://cdn.jsdelivr.net/npm/vuex@3.1.2/dist/vuex.min.js',
+//       'https://cdn.jsdelivr.net/npm/vant@2.4.7/lib/index.min.js'
+//     ]
+//   }
+// }
+
 module.exports = {
-  publicPath: './', // router hash 模式使用
-  // publicPath: process.env.NODE_ENV === 'development' ? '/' : '/app/', //router history模式使用 需要区分生产环境和开发环境，不然build会报错
-  outputDir: 'dist',
-  assetsDir: 'static',
-  lintOnSave: process.env.NODE_ENV === 'development',
-  productionSourceMap: false,
+  publicPath: './', // 署应用包时的基本 URL。 vue-router hash 模式使用
+  //  publicPath: '/app/', //署应用包时的基本 URL。  vue-router history模式使用
+  outputDir: 'dist', //  生产环境构建文件的目录
+  assetsDir: 'static', //  outputDir的静态资源(js、css、img、fonts)目录
+  lintOnSave: false,
+  productionSourceMap: false, // 如果你不需要生产环境的 source map，可以将其设置为 false 以加速生产环境构建。
   devServer: {
-    port: port,
-    open: false,
+    port: 9020, // 端口
+    open: false, // 启动后打开浏览器
     overlay: {
+      //  当出现编译器错误或警告时，在浏览器中显示全屏覆盖层
       warnings: false,
       errors: true
     }
-  },
-
-  configureWebpack: config => {
-    // 为生产环境修改配置...
-    if (process.env.NODE_ENV === 'production') {
-      // externals里的模块不打包
-      Object.assign(config, {
-        name: name,
-        externals: externals
-      })
-    }
-    // 为开发环境修改配置...
-    // if (process.env.NODE_ENV === 'development') {
+    // proxy: {
+    //   //配置跨域
+    //   '/api': {
+    //       target: "https://test.xxx.com",
+    //       // ws:true,
+    //       changOrigin:true,
+    //       pathRewrite:{
+    //           '^/api':'/'
+    //       }
+    //   }
     // }
   },
-  chainWebpack(config) {
+  css: {
+    extract: IS_PROD,
+    sourceMap: false,
+    loaderOptions: {
+      scss: {
+        // 向全局sass样式传入共享的全局变量, $src可以配置图片cdn前缀
+        // 详情: https://cli.vuejs.org/guide/css.html#passing-options-to-pre-processor-loaders
+        prependData: `
+          @import "assets/css/index.scss";
+          @import "assets/css/mixin.scss";
+          @import "assets/css/variables.scss";
+          $cdn: "${defaultSettings.$cdn}";
+          `
+      }
+    }
+  },
+  configureWebpack: config => {
+    config.name = name
+
+    // 为生产环境修改配置...
+    // if (IS_PROD) {
+    //   // externals
+    //   config.externals = externals
+    // }
+  },
+
+  chainWebpack: config => {
     config.plugins.delete('preload') // TODO: need test
     config.plugins.delete('prefetch') // TODO: need test
-    // alias
+
+    // 别名 alias
     config.resolve.alias
       .set('@', resolve('src'))
       .set('assets', resolve('src/assets'))
@@ -74,19 +102,20 @@ module.exports = {
       .set('components', resolve('src/components'))
 
     /**
-     * 添加CDN参数到htmlWebpackPlugin配置中， 详见public/index.html 修改
+     * 添加CDN参数到htmlWebpackPlugin配置中
      */
-    config.plugin('html').tap(args => {
-      if (process.env.NODE_ENV === 'production') {
-        args[0].cdn = cdn.build
-      }
-      if (process.env.NODE_ENV === 'development') {
-        args[0].cdn = cdn.dev
-      }
-      return args
-    })
+    // config.plugin('html').tap(args => {
+    //   if (IS_PROD) {
+    //     args[0].cdn = cdn.build
+    //   } else {
+    //     args[0].cdn = cdn.dev
+    //   }
+    //   return args
+    //  })
 
-    // set preserveWhitespace
+    /**
+     * 设置保留空格
+     */
     config.module
       .rule('vue')
       .use('vue-loader')
@@ -96,18 +125,27 @@ module.exports = {
         return options
       })
       .end()
-
+    /**
+     * 打包分析
+     */
+    if (IS_PROD) {
+      config.plugin('webpack-report').use(BundleAnalyzerPlugin, [
+        {
+          analyzerMode: 'static'
+        }
+      ])
+    }
     config
       // https://webpack.js.org/configuration/devtool/#development
-      .when(process.env.NODE_ENV === 'development', config => config.devtool('cheap-source-map'))
+      .when(!IS_PROD, config => config.devtool('cheap-source-map'))
 
-    config.when(process.env.NODE_ENV !== 'development', config => {
+    config.when(IS_PROD, config => {
       config
         .plugin('ScriptExtHtmlWebpackPlugin')
         .after('html')
         .use('script-ext-html-webpack-plugin', [
           {
-            // `runtime` must same as runtimeChunk name. default is `runtime`
+            // 将 runtime 作为内联引入不单独存在
             inline: /runtime\..*\.js$/
           }
         ])
@@ -115,18 +153,24 @@ module.exports = {
       config.optimization.splitChunks({
         chunks: 'all',
         cacheGroups: {
+          // cacheGroups 下可以可以配置多个组，每个组根据test设置条件，符合test条件的模块
           commons: {
             name: 'chunk-commons',
-            test: resolve('src/components'), // can customize your rules
-            minChunks: 3, //  minimum common number
-            priority: 5,
-            reuseExistingChunk: true
+            test: resolve('src/components'),
+            minChunks: 3, //  被至少用三次以上打包分离
+            priority: 5, // 优先级
+            reuseExistingChunk: true // 表示是否使用已有的 chunk，如果为 true 则表示如果当前的 chunk 包含的模块已经被抽取出去了，那么将不会重新生成新的。
           },
-          libs: {
+          node_vendors: {
             name: 'chunk-libs',
-            chunks: 'initial', // only package third parties that are initially dependent
+            chunks: 'initial', // 只打包初始时依赖的第三方
             test: /[\\/]node_modules[\\/]/,
             priority: 10
+          },
+          vantUI: {
+            name: 'chunk-vantUI', // 单独将 vantUI 拆包
+            priority: 20, // 数字大权重到，满足多个 cacheGroups 的条件时候分到权重高的
+            test: /[\\/]node_modules[\\/]_?vant(.*)/
           }
         }
       })

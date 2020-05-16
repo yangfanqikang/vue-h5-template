@@ -2,69 +2,56 @@
 <template>
   <div class="app-container">
     <div class="warpper">
-      <h1 class="demo-home__title"><img src="https://imgs.solui.cn/weapp/logo.png" /><span>VUE H5开发模板</span></h1>
+      <h1 class="demo-home__title"><img src="https://imgs.solui.cn/weapp/logo.png" /><span> VUE H5开发模板</span></h1>
       <h2 class="demo-home__desc">
         A vue h5 template with Vant UI
       </h2>
     </div>
     <van-cell icon="success" v-for="item in list" :key="item" :title="item" />
-    <van-tabbar fixed v-model="active" @change="onChange">
-      <van-tabbar-item icon="home-o">首页</van-tabbar-item>
-      <van-tabbar-item icon="good-job-o">github</van-tabbar-item>
-    </van-tabbar>
   </div>
 </template>
 
 <script>
-// 请求接口
-import {getUserInfo} from '@/api/user.js'
 export default {
-  components: {},
-
   data() {
     return {
-      active: 0,
       list: [
         'Vue-cli4',
-        'VantUI组件按需加载',
-        'Sass',
+        '配置多环境变量',
+        'VantUI 组件按需加载',
+        'Sass 全局样式',
         'Webpack 4',
+        'Vuex 状态管理',
+        'Axios 封装及接口管理',
         'Vue-router',
-        'Vuex',
-        'Axios封装',
-        'rem适配方案',
-        '多环境配置',
-        '生产环境cdn优化首屏加速',
-        'babel低版本浏览器兼容',
-        'Eslint+Pettier统一开发规范'
+        'Webpack 4 vue.config.js 基础配置',
+        '配置 proxy 跨域',
+        '配置 alias 别名',
+        '配置 打包分析',
+        '配置 externals 引入 cdn 资源',
+        '去掉 console.log',
+        'splitChunks 单独打包第三方模块',
+        '添加 IE 兼容',
+        'Eslint+Pettier 统一开发规范'
+
       ]
     }
   },
 
-  computed: {},
-
-  mounted() {
-    this.initData()
+  computed: {
   },
 
-  methods: {
-    // 请求数据案例
-    initData() {
-      // 请求接口数据，仅作为展示，需要配置src->config下环境文件
-      getUserInfo()
-        .then(() => {})
-        .catch(() => {})
-    },
-    onChange(index) {
-      if (index === 1) window.location.href = 'https://github.com/sunnie1992/vue-h5-template'
-    }
-  }
+  mounted() {
+  },
+
+  methods: {}
 }
 </script>
 <style lang="scss" scoped>
 .app-container {
   .warpper {
     padding: 12px;
+    background: #fff;
     .demo-home__title {
       margin: 0 0 6px;
       font-size: 32px;
